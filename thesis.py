@@ -45,7 +45,7 @@ class Player:
         self.name = name
 
     def draw(self, deck):
-        self.hand.append(deck.deal())
+        self.hand.add(deck.deal())
         #take card from deck
 
     def play(self):
@@ -73,6 +73,9 @@ class Deck:
 
     def deal(self):
         return self.cards.pop()
+    
+    def add(self, crd):
+        self.cards.append(crd)
 
     def length(self):
         return len(self.cards)
@@ -127,6 +130,16 @@ deck2.build()
 deck2.printdeck()
 
 
+deck2 = Deck()
+deck2.build()
+#deck2.printdeck()
+print('hi')
+playr1 = Player(1)
+playr1.hand.printdeck()
+playr1.draw(deck2)
+deck2.printdeck()
+print('hello')
+playr1.hand.printdeck()
 
 
 
