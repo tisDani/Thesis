@@ -14,18 +14,18 @@ init(autoreset=True)
 
 class Card:
 
-    def __init__(self, number, colour, text, player, position):
+    def __init__(self, number, colour, text):
         self.number = number
         self.colour = colour   
-        self.player = player #sub position, deck
-        self.position = position   #hand, discard, table, Player, deck, middle
+        #self.player = player #sub position, deck
+        #self.position = position   #hand, discard, table, Player, deck, middle
         self.text = text
 
     def show(self):
-        print('{} {} Player: {} Position: {} '.format(self.number , self.colour, self.player, self.position))
+        print('{} {}  '.format(self.number , self.colour))
 
     def paint(self):     
-        print(self.text +'{} '.format(self.number))
+        print(self.text +'{} '.format(self.number), end =" ")
 
     def move(self, new_player, new_position):
          self.player = new_player
@@ -39,108 +39,98 @@ class Player:
     name = None
 
     def __init__(self, name):
-        self.hand = Deck()
-        self.played = Deck()
-        self.discarded = Deck()
+        self.hand = Deck('hand ' + name)
+        self.played = Deck('played ' + name)
+        self.discarded = Deck('discarded ' + name)
         self.name = name
 
-    def draw(self, deck):
-        self.hand.add(deck.deal())
-        #take card from deck
-
-    def play(self):
-        return self.hand.pop(0)
+    def draw(self, deck, num):
+        deck.deal(self.hand, num)
+        #take n cards from deck
     
     #def pshow(self):
     #    print("{: >20} {: >20} {: >20}".format(printdeck(self.hand), 2, 3))
 
-
 class Deck:
     cards = None
+    name = None
 
-    def __init__(self):
+    def __init__(self, name):
         self.cards = []
+        self.name = name
        
     def build(self):
         colours = [(2,'purple',Back.CYAN), (2, 'red',Back.RED), (2, 'yellow',Back.YELLOW), (3, 'blue',Back.BLUE), (3, 'orange',Back.MAGENTA), (4, 'green',Back.GREEN), (5, 'black',Back.WHITE)]
         for colour in colours:
             for i in range(0,colour[0]):
-                self.cards.append(Card(colour[0], colour[1], colour[2], 'deck', 'deck'))
-        
+                self.cards.append(Card(colour[0], colour[1], colour[2]))    
 
     def shuffle(self):
         random.shuffle(self.cards)
 
-    def deal(self):
-        return self.cards.pop()
-    
-    def add(self, crd):
-        self.cards.append(crd)
+    def deal(self, to, num):   #sample without replacement
+        a = random.choices(self.cards, k = num)
+        mul_move(self.cards, to.cards, a)
 
     def length(self):
         return len(self.cards)
     
     def printdeck(self):
+        print(self.name, end = ':      ')
         for i in range(0, self.length()):
             self.cards[i].paint()
+        print('\n')
 
 
-class Table:
+def move(fromm, to, item):
+    item.paint()
+    fromm.remove(item) #list.remove(x): x not in list
+    to.append(item)
 
-    def __init__(self, p1, p2):
-        self.cards = [p1,p2]
+def mul_move(fromm, to, items):
+    for i in range(0, len(items)): #doesn't always work
+        move(fromm, to, items[i])
 
-    def play(self, player, item):
-        player.hand.remove(item)
-        player.played.append (item)
-
-    def popAll(self):
-        return self.cards
-
-    def clear(self):
-        self.cards = []
-
-    def showtable(self) :
-        pass
-        #for card in deck:
-        #print("{: >20} {: >20} {: >20}".format(self.cards[0].hand, 2, 3))
-
-    
+ 
 class HanamikojiEngine:
     deck = None
     player1 = None
     player2 = None
-    pile = None
     currentPlayer = None
     result = None
 
     def __init__(self):
-        self.deck = Deck()
-        self.deck.build()
+        self.deck = Deck('stack')
         self.player1 = Player("Player 1")
         self.player2 = Player("Player 2")
-        #self.pile = Pile()
-        self.deal()
         self.currentPlayer = self.player1
 
+    def start(self):
+        self.deck.build()
+        self.player1.draw(self.deck, 2)
+        self.player2.draw(self.deck, 5)
 
+    def show_table(self):
+        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        self.player1.hand.printdeck()
+        self.player1.discarded.printdeck()
+        self.player1.played.printdeck()
+        self.player2.hand.printdeck()
+        self.player2.discarded.printdeck()
+        self.player2.played.printdeck()
+        self.deck.printdeck()
+        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        
 
-deck2 = Deck()
-deck2.build()
-deck2.printdeck()
+game = HanamikojiEngine()
+game.start()
+game.show_table()
 
+#print('---------------------------1----------------------------------------------')
 
-deck2 = Deck()
-deck2.build()
-#deck2.printdeck()
-print('hi')
-playr1 = Player(1)
-playr1.hand.printdeck()
-playr1.draw(deck2)
-deck2.printdeck()
-print('hello')
-playr1.hand.printdeck()
+#print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
+#print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
