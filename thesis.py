@@ -1,8 +1,3 @@
-#2 : purple, red, yellow
-#3 : blue, orange
-#4 : green
-#5 : black
-
 #references: https://docs.replit.com/tutorials/python/build-card-game-pygame
 import random
 
@@ -30,8 +25,6 @@ class Player:
     played = None
     discarded = None
     store = None
-    trade3x1 = None
-    trade2x2 = None
     name = None
 
     def __init__(self, name):
@@ -39,20 +32,18 @@ class Player:
         self.played = Deck('played ' + name)
         self.discarded = Deck('discarded ' + name)
         self.store = Deck('store ' + name)
-        self.trade3x1 = Deck('trade 3x1 ' + name)
-        self.trade2x2 = Deck('trade 2x2 ' + name)
+        self.played = Deck('played' + name)
         self.name = name
 
     def draw(self, deck, num):
         deck.deal(self.hand, num)  #take n cards from deck
     
     def pshow(self):
-        print("\n {} {: >20} {: >25} {: >20} {: >20} {: >20} ".format(self.name,'Hand', 'Discard', 'Store', 'Trade 3x1', 'Trade 2x2'))
+        print("\n {} {: >20} {: >25} {: >20} {: >20}  ".format(self.name, 'Hand', 'Discard', 'Store', 'Played'))
         self.hand.printdeck()
         self.discarded.printdeck()
         self.store.printdeck()
-        self.trade3x1.printdeck()
-        self.trade2x2.printdeck()
+        self.played.printdeck()
         print('\n')
 
 class Deck:
@@ -89,24 +80,21 @@ class Deck:
         for i in range(0, self.length()):
             self.cards[i].paint()
 
-def move(from_deck, to_deck, card_id):  #from, to: Deck. Item: card
+def move(from_deck, to_deck, card_id):  
     card = i_d(from_deck, card_id)
-    from_deck.cards.remove(card) #list.remove(x): x not in list
+    from_deck.cards.remove(card) 
     to_deck.cards.append(card)
-
-
 
 def i_d(deck, iD):
     cards = (card for card in deck.cards 
         if card.id == iD)
     return next(cards)
+
     
+def mul_move(from_deck, to_deck, items):
+    for i in range(0, len(items)): 
+        move(from_deck, to_deck, items[i])
 
-def mul_move(fromm, to, items):
-    for i in range(0, len(items)): #doesn't always work
-        move(fromm, to, items[i])
-
- 
 class HanamikojiEngine:
     deck = None
     big_deck = None
@@ -134,7 +122,7 @@ class HanamikojiEngine:
     def interactive(self):
         self.cPlayer = self.player1
         self.oPlayer = self.player2
-        for i in range(0,1):
+        for i in range(0,2):
             print('{} Move: '.format(self.cPlayer.name), end=' ')
             self.redirect(input())
             self.cPlayer = self.player2
@@ -148,32 +136,36 @@ class HanamikojiEngine:
             self.store(input('First store: '))
            
         elif inpt == 'Trade 3x1':
-            pass
-        elif inpt == 'Trade 2x2':   
-            pass         
+            self.trade3x1(input('First trade: '), input('Second trade: '), input('Third trade: '))
 
+        elif inpt == 'Trade 2x2':   
+            self.trade2x2(input('First pair: '), input('- '), input('Second pair: '), input('- '))
+                
     
     def discard(self, inpt1, inpt2):
         print('{} Discards  '.format(self.cPlayer.name), end=' ')
         mul_move(self.cPlayer.hand, self.cPlayer.discarded, [inpt1, inpt2])
 
-    def trade2x2(self, fromm, to, a1, a2, b1, b2):
-        pass
-
-    def trade3x1(self, fromm, to, a, b, c):
+    def trade2x2(self, a1, a2, b1, b2):
+        print('{} Offers  '.format(self.cPlayer.name), end=' ')
+        inpt = input('Choice: ') #1,2
+        lst = [[a1, a2], [b1, b2]]
+        choice = lst.pop(int(inpt)-1)
+        mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
+        mul_move(self.cPlayer.hand, self.cPlayer.played, lst[0])
         
-        #player x offer nxm cards
-        choice = input()
-        
-        #player y choose axb cards
-        #redistribute
-
-        pass
+    def trade3x1(self, a, b, c):
+        print('{} Offers  '.format(self.cPlayer.name), end=' ')
+        inpt = input('Choice: ') #1,2,3
+        lst = [a, b, c]
+        choice = [lst.pop(int(inpt)-1)]
+        mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
+        mul_move(self.cPlayer.hand, self.cPlayer.played, lst)
 
     def store(self, inpt1):
         print('{} Stores:  '.format(self.cPlayer.name), end=' ')
         move(self.cPlayer.hand, self.cPlayer.store, inpt1)
-
+    
     def show_table(self):
         print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         self.player1.pshow()
@@ -195,7 +187,6 @@ game.show_table()
 # 2p, 2r, 2y, 3b, 3o, 4g, 5b
 
 
-
 #game.player1.pshow()
 #game.player1.hand.cards[2].paint_big()
 #print('---------------------------1----------------------------------------------')
@@ -203,30 +194,6 @@ game.show_table()
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
-
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
 #colours = [(2,'purple',Back.CYAN), (2, 'red',Back.RED), (2, 'yellow',Back.YELLOW), (3, 'blue',Back.BLUE), (3, 'orange',Back.MAGENTA), (4, 'green',Back.GREEN), (5, 'black',Back.WHITE)]
-#deck1 =  [Card(colour[0], colour[1], colour[2], 'deck', 'deck') for colour in colours for i in range(0, colour[0])]
 #colours = ['purple', 'red', 'yellow', 'blue', 'orange', 'green', 'black']
-#numbers = [2,2,2,3,3,4,5]
-#deck1 =  [Card(number, colour, 'deck', 'deck') for colour in colours for number in range(0,numbers)]
-
-
-#b = table(deck1)
-#print(b)
-#print('----------2--------')
-#print(deck1)
-
-# define a function for key
-#def key_func(k):
-#    return k['posiion']
- 
-# sort INFO data by 'company' key.
-#INFO = sorted(deck1, key=key_func)
- 
-#for key, value in groupby(deck1, key_func):
-#    print(key)
-#    print(list(value))
-#Dealing :
-#Move:
