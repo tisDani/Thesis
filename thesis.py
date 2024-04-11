@@ -4,15 +4,12 @@
 #5 : black
 
 #references: https://docs.replit.com/tutorials/python/build-card-game-pygame
-
-from itertools import groupby
-from enum import Enum
 import random
 
 from colorama import Back, Back, Style, init
 init(autoreset=True)
 
-#random.seed(10)
+random.seed(10)
 
 class Card:
 
@@ -22,15 +19,11 @@ class Card:
         self.text = text
         self.id = id
 
-    #def show(self):
-    #    print('{} {}  '.format(self.number , self.colour))
-
     def paint(self):     
         print(self.text +'{} '.format(self.number), end =" ")
 
     def paint_big(self):
         print(self.text + '       \n   {}   \n      .'.format(self.number))
-
 
 class Player: 
     hand = None
@@ -96,19 +89,17 @@ class Deck:
         for i in range(0, self.length()):
             self.cards[i].paint()
 
-def move(fromm, to, item):
-    item.paint()
-    fromm.remove(item) #list.remove(x): x not in list
-    to.append(item)
+def move(from_deck, to_deck, card_id):  #from, to: Deck. Item: card
+    card = i_d(from_deck, card_id)
+    from_deck.cards.remove(card) #list.remove(x): x not in list
+    to_deck.cards.append(card)
 
-def id_move(fromm, iD):
-    s = fromm.index(fromm[id==iD])
-    print(s)
 
-def i_d(dck, iD):
-    o = (card for card in dck.cards 
+
+def i_d(deck, iD):
+    cards = (card for card in deck.cards 
         if card.id == iD)
-    next(o).paint()
+    return next(cards)
     
 
 def mul_move(fromm, to, items):
@@ -121,7 +112,8 @@ class HanamikojiEngine:
     big_deck = None
     player1 = None
     player2 = None
-    currentPlayer = None
+    cPlayer = None
+    oPlayer = None
     result = None
 
     def __init__(self):
@@ -129,7 +121,8 @@ class HanamikojiEngine:
         self.big_deck = Deck('big')
         self.player1 = Player("Player 1")
         self.player2 = Player("Player 2")
-        self.currentPlayer = self.player1
+        self.cPlayer = self.player1
+        self.oPlayer = self.player2
 
     def start(self):
         self.deck.build()
@@ -139,38 +132,30 @@ class HanamikojiEngine:
         self.player2.draw(self.deck, 5)
 
     def interactive(self):
-        self.currentPlayer = self.player1
+        self.cPlayer = self.player1
+        self.oPlayer = self.player2
         for i in range(0,1):
-            print('{} Move: '.format(self.currentPlayer.name), end=' ')
+            print('{} Move: '.format(self.cPlayer.name), end=' ')
             self.redirect(input())
-            self.currentPlayer = self.player2
+            self.cPlayer = self.player2
+            self.oPlayer = self.player1
 
     def redirect(self, inpt):
         if inpt == 'Discard':
-            self.diiscard(self.currentPlayer, input())
-            #self.currentPlayer.discarded.cards.append(self.currentPlayer.hand.cards.pop(int(input('Index'))))
-            
+            self.discard(input('First discard: '), input('Second discard: '))
+           
         elif inpt == 'Store':
-            pass
+            self.store(input('First store: '))
+           
         elif inpt == 'Trade 3x1':
             pass
         elif inpt == 'Trade 2x2':   
             pass         
 
-    def show_table(self):
-        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        self.player1.pshow()
-        print('\n')
-        game.big_deck.printdeck()
-        print('\n')
-        self.player2.pshow()
-        self.deck.printdeck()
-        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        
-    def diiscard(self, x, y):
-        print('{} Discards {} '.format(x.name, y))
-        #x.hand.cards[id==y].paint()
-        #id_move(x.hand.cards, y)
+    
+    def discard(self, inpt1, inpt2):
+        print('{} Discards  '.format(self.cPlayer.name), end=' ')
+        mul_move(self.cPlayer.hand, self.cPlayer.discarded, [inpt1, inpt2])
 
     def trade2x2(self, fromm, to, a1, a2, b1, b2):
         pass
@@ -185,25 +170,26 @@ class HanamikojiEngine:
 
         pass
 
-    def discard(self, fromm, a, b):
-        mul_move(fromm.hand.cards, fromm.discarded.cards, [a,b])
+    def store(self, inpt1):
+        print('{} Stores:  '.format(self.cPlayer.name), end=' ')
+        move(self.cPlayer.hand, self.cPlayer.store, inpt1)
 
-    def store(self, fromm, a):
-        move(fromm.hand.cards, fromm.store.cards, a)
+    def show_table(self):
+        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        self.player1.pshow()
+        print('\n')
+        game.big_deck.printdeck()
+        print('\n')
+        self.player2.pshow()
+        self.deck.printdeck()
+        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        
 
 game = HanamikojiEngine()
 game.start()
-#game.show_table()
-#game.discard(game.player1, game.player1.hand.cards[0],  game.player1.hand.cards[1])
-#game.show_table()
-#game.store(game.player2, game.player2.hand.cards[3])
-game.deck.printdeck()
-print('--------')
-#i_move(game.deck, input('here Id:'))
-i_d(game.deck, '2y')
-#game.show_table()
-#game.interactive()
-#game.show_table()
+game.show_table()
+game.interactive()
+game.show_table()
 
 
 # 2p, 2r, 2y, 3b, 3o, 4g, 5b
