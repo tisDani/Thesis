@@ -46,10 +46,6 @@ class Player:
         self.discarded.printdeck()
         self.store.printdeck()
         print('\n')
-    
-    def clear(self):
-        pass
-
 
 class Deck:
     cards = None
@@ -59,18 +55,28 @@ class Deck:
     def __init__(self, name):
         self.cards = []
         self.name = name
-        self.score = np.zeros(7, dtype=int)
+        self.score = [0, 0, 0, 0, 0, 0, 0]
        
     def build(self):
-        colours = [(2,'purple',Back.CYAN, '2p', 1), (2, 'red',Back.RED, '2r', 2), (2, 'yellow',Back.YELLOW, '2y', 3), (3, 'blue',Back.BLUE, '3b', 4), (3, 'orange',Back.MAGENTA, '3o', 5), (4, 'green',Back.GREEN, '4g', 6), (5, 'black',Back.WHITE, '5b', 7)]
+        colours = [[2,'purple',Back.CYAN, '2p', 1], [2, 'red',Back.RED, '2r', 2], [2, 'yellow',Back.YELLOW, '2y', 3], [3, 'blue',Back.BLUE, '3b', 4], [3, 'orange',Back.MAGENTA, '3o', 5], [4, 'green',Back.GREEN, '4g', 6], [5, 'black',Back.WHITE, '5b', 7]]
         for colour in colours:
             for i in range(0,colour[0]):
                 self.cards.append(Card(colour[0], colour[1], colour[2], colour[3], colour[4])) 
 
     def build_big(self):
-        colours = [(2,'purple',Back.CYAN, '2p', 1), (2, 'red',Back.RED, '2r', 2), (2, 'yellow',Back.YELLOW, '2y', 3), (3, 'blue',Back.BLUE, '3b', 4), (3, 'orange',Back.MAGENTA, '3o', 5), (4, 'green',Back.GREEN, '4g', 6), (5, 'black',Back.WHITE, '5b', 7)]
-        for colour in colours:
-            self.cards.append(Card(colour[0], colour[1], colour[2], colour[3], colour[4]))   
+        colours = [[2,'purple',Back.CYAN, '2p', 1], [2, 'red',Back.RED, '2r', 2], [2, 'yellow',Back.YELLOW, '2y', 3], [3, 'blue',Back.BLUE, '3b', 4], [3, 'orange',Back.MAGENTA, '3o', 5], [4, 'green',Back.GREEN, '4g', 6], [5, 'black',Back.WHITE, '5b', 7]]
+        colors =  [u'2\u0305', u'2\u0304', u'2\u0304', u'3\u0304', u'3\u0304', u'4\u0304', u'5\u0304',u'2\u0332', u'2\u0332', u'2\u0332', u'3\u0332', u'3\u0332', u'4\u0332', u'5\u0332']
+        for i in range(0,7):
+            if carryon[i] == 1:
+                colours[i][0] = colors[i]
+            elif carryon[i] == 2:
+                colours[i][0] = colors[i+7]
+            self.cards.append(Card(colours[i][0], colours[i][1], colours[i][2], colours[i][3], colours[i][4]))   
+
+    def build_sample(self):
+        colours = [[2,'purple',Back.CYAN, '2p', 1], [2, 'red',Back.RED, '2r', 2], [2, 'yellow',Back.YELLOW, '2y', 3], [3, 'blue',Back.BLUE, '3b', 4], [3, 'orange',Back.MAGENTA, '3o', 5], [4, 'green',Back.GREEN, '4g', 6], [5, 'black',Back.WHITE, '5b', 7]]
+        for i in range(0,7):
+            self.cards.append(Card(colours[i][0], colours[i][1], colours[i][2], colours[i][3], colours[i][4]))   
 
     def shuffle(self):
         random.shuffle(self.cards)
@@ -88,7 +94,7 @@ class Deck:
             card.paint()
 
     def count(self):
-        self.score = np.zeros(7, dtype=int)
+        self.score = [0, 0, 0, 0, 0, 0, 0]
         for card in self.cards:
             self.score[card.position - 1] +=1
 
@@ -112,6 +118,7 @@ def mul_move(from_deck, to_deck, items):
 class HanamikojiEngine:
     deck = None
     big_deck = None
+    sample_deck = None
     player1 = None
     player2 = None
     cPlayer = None
@@ -122,6 +129,7 @@ class HanamikojiEngine:
     def __init__(self):
         self.deck = Deck('stack')
         self.big_deck = Deck('big')
+        self.sample_deck = Deck('sample')
         self.player1 = Player("Player 1")
         self.player2 = Player("Player 2")
         self.cPlayer = self.player1
@@ -131,10 +139,10 @@ class HanamikojiEngine:
         self.deck.build()
         self.deck.shuffle()
         self.big_deck.build_big()
+        self.sample_deck.build_sample()
         self.player1.draw(self.deck, 6)
         self.player2.draw(self.deck, 6)
         self.show_table()
-
 
     def win(self):
         colours = [2,2,2,3,3,4,5]
@@ -142,6 +150,8 @@ class HanamikojiEngine:
         geishas1 = 0
         points2 = 0
         geishas2 = 0
+        
+        print('{} {} '.format(self.player1.played.score, self.player2.played.score))
         for i in range(0,7):
             if self.player1.played.score[i] > self.player2.played.score[i]:
                 points1 += colours[i]
@@ -151,30 +161,29 @@ class HanamikojiEngine:
                 points2 += colours[i]
                 geishas2 += 1
                 carryon[i] = 2
+            elif carryon[i] == 1 :
+                points1 += colours[i]
+                geishas1 += 1
+            elif carryon[i] == 2 :
+                points2 += colours[i]
+                geishas2 += 1
+
         if points1 == 11:
             print('Player 1 wins')
         elif points2 == 11:
             print('Player 2 wins')
         elif geishas1 == 4:
             print('Player 1 wins')
-        elif geishas2 ==4 :
+        elif geishas2 == 4 :
             print('Player 2 wins')
         else:
             print('No winner yet') 
             round2 = HanamikojiEngine()
             round2.start()
-            print(carryon)
             round2.interactive()
             
-
         print('{} {} {} {} '.format(points1, geishas1, points2, geishas2))
         return [points1, geishas1, points2, geishas2]
-
-
-    def start_new_round(self):
-        self.player1.clear()
-        pass
-
 
     def interactive(self):
         for i in range(0,1):
@@ -194,8 +203,6 @@ class HanamikojiEngine:
             move(self.player2.store, self.player2.played, self.player2.store.cards[0].id)
         self.show_table()
         self.result = self.win()
-        print(carryon)
-
 
     def redirect(self, inpt):
         if inpt == 'Discard':
@@ -215,16 +222,16 @@ class HanamikojiEngine:
         mul_move(self.cPlayer.hand, self.cPlayer.discarded, [inpt1, inpt2])
 
     def trade2x2(self, a1, a2, b1, b2):
-        print('{} Offers  '.format(self.cPlayer.name), end=' ')
-        inpt = input('Choice: ') #1,2
+        print('{}'.format(self.oPlayer.name), end=' ')
+        inpt = input('chooses: ') #1,2
         lst = [[a1, a2], [b1, b2]]
         choice = lst.pop(int(inpt)-1)
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
         mul_move(self.cPlayer.hand, self.cPlayer.played, lst[0])
         
     def trade3x1(self, a, b, c):
-        #print('{} Offers  '.format(self.cPlayer.name), end=' ')
-        inpt = input('Choice: ') #1,2,3
+        print('{}'.format(self.oPlayer.name), end=' ')
+        inpt = input('Chooses: ') #1,2,3
         lst = [a, b, c]
         choice = [lst.pop(int(inpt)-1)]
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
@@ -242,18 +249,18 @@ class HanamikojiEngine:
             for k in range(0,len(self.player1.played.score)):
                 j = self.player1.played.score[k]
                 if i<=j :
-                    self.big_deck.cards[k].paint()
+                    self.sample_deck.cards[k].paint()
                 else:
                     print('  ', end = ' ')
             print('\n')
-        game.big_deck.printdeck()
+        self.big_deck.printdeck()
         print('\n')
         for i in range(0,max(self.player2.played.score)): 
             print(' ', end = '                 ')
             for k in range(0,len(self.player2.played.score)):
                 j = self.player2.played.score[k]
                 if i<j :
-                    self.big_deck.cards[k].paint()
+                    self.sample_deck.cards[k].paint()    #-----------------------
                 else:
                     print('  ', end = ' ')
             print('\n')
@@ -261,27 +268,17 @@ class HanamikojiEngine:
         self.player2.pshow()
         print('\n \n Deck:  ', end=' ')
         self.deck.printdeck()
-        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
-#todo: make tokens for carryon, adjust winner for round 2      
+        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')     
 
 game = HanamikojiEngine()
 game.start()
 game.interactive()
 
 
-
 # 2p, 2r, 2y, 3b, 3o, 4g, 5b
 
-
-#game.player1.pshow()
-#game.player1.hand.cards[2].paint_big()
 #print('---------------------------1----------------------------------------------')
-
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-#colours = [(2,'purple',Back.CYAN), (2, 'red',Back.RED), (2, 'yellow',Back.YELLOW), (3, 'blue',Back.BLUE), (3, 'orange',Back.MAGENTA), (4, 'green',Back.GREEN), (5, 'black',Back.WHITE)]
-#colours = ['purple', 'red', 'yellow', 'blue', 'orange', 'green', 'black']
 
