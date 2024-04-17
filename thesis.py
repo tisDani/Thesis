@@ -3,10 +3,11 @@ import random
 from colorama import Back, Back, init
 init(autoreset=True)
 
-random.seed(10)
+#random.seed(10)
 
 carryon = [0, 0, 0, 0, 0, 0, 0]
 game_round = [0]
+num_phases = 4
 
 class Card:
 
@@ -187,7 +188,7 @@ class HanamikojiEngine:
             
     def interactive(self):
         game_round[0] += 1
-        for i in range(0,1):
+        for i in range(0,num_phases - 1):
             self.cPlayer = self.player1
             self.oPlayer = self.player2
             for j in range(0,2):
@@ -323,8 +324,12 @@ class HanamikojiEngine:
         self.deck.printdeck()
         print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')     
 
-name_player1 = input('Enter Player 1 name:') #Enter 'Random' for random player 
-name_player2 = input('Enter Player 2 name:')
+if input('Both Random? ') == 'yes':
+    name_player1 = 'Random'
+    name_player2 = 'Random'
+else:
+    name_player1 = input('Enter Player 1 name:') #Enter 'Random' for random player 
+    name_player2 = input('Enter Player 2 name:')
 game = HanamikojiEngine(name_player1, name_player2)
 game.start()
 game.interactive()
@@ -336,4 +341,5 @@ game.interactive()
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+
 
