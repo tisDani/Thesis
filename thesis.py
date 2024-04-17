@@ -1,12 +1,12 @@
 #references: https://docs.replit.com/tutorials/python/build-card-game-pygame
 import random
-import numpy as np
-from colorama import Back, Back, Style, init
+from colorama import Back, Back, init
 init(autoreset=True)
 
 random.seed(10)
 
 carryon = [0, 0, 0, 0, 0, 0, 0]
+game_round = [0]
 
 class Card:
 
@@ -29,6 +29,7 @@ class Player:
     discarded = None
     store = None
     name = None
+    moves = None
 
     def __init__(self, name):
         self.hand = Deck('hand ' + name)
@@ -36,6 +37,7 @@ class Player:
         self.discarded = Deck('discarded ' + name)
         self.store = Deck('store ' + name)
         self.name = name
+        self.moves = [0, 0, 0, 0]
 
     def draw(self, deck, num):
         deck.deal(self.hand, num)  #take n cards from deck
@@ -123,15 +125,13 @@ class HanamikojiEngine:
     player2 = None
     cPlayer = None
     oPlayer = None
-    result = None
-    table = None
 
-    def __init__(self):
+    def __init__(self, name1, name2):
         self.deck = Deck('stack')
         self.big_deck = Deck('big')
         self.sample_deck = Deck('sample')
-        self.player1 = Player("Player 1")
-        self.player2 = Player("Player 2")
+        self.player1 = Player(name1)
+        self.player2 = Player(name2)
         self.cPlayer = self.player1
         self.oPlayer = self.player2
 
@@ -151,9 +151,10 @@ class HanamikojiEngine:
         points2 = 0
         geishas2 = 0
         
-        print('{} {} '.format(self.player1.played.score, self.player2.played.score))
         for i in range(0,7):
-            if self.player1.played.score[i] > self.player2.played.score[i]:
+            if self.player1.played.score[i] == 0 and self.player2.played.score[i] == 0:
+                pass
+            elif self.player1.played.score[i] > self.player2.played.score[i]:
                 points1 += colours[i]
                 geishas1 += 1
                 carryon[i] = 1
@@ -167,55 +168,99 @@ class HanamikojiEngine:
             elif carryon[i] == 2 :
                 points2 += colours[i]
                 geishas2 += 1
-
-        if points1 == 11:
+        
+        print('{}: {} Geishas, {} Points. {}: {} Geishas, {} Points '.format(self.player1.name, geishas1, points1,self.player2.name, geishas2, points2 ))
+        
+        if points1 >= 11:  
             print('Player 1 wins')
-        elif points2 == 11:
+        elif points2 >= 11:
             print('Player 2 wins')
-        elif geishas1 == 4:
+        elif geishas1 >= 4:
             print('Player 1 wins')
-        elif geishas2 == 4 :
+        elif geishas2 >= 4 :
             print('Player 2 wins')
         else:
             print('No winner yet') 
-            round2 = HanamikojiEngine()
+            round2 = HanamikojiEngine(name_player1, name_player2)
             round2.start()
             round2.interactive()
             
-        print('{} {} {} {} '.format(points1, geishas1, points2, geishas2))
-        return [points1, geishas1, points2, geishas2]
-
     def interactive(self):
+        game_round[0] += 1
         for i in range(0,1):
             self.cPlayer = self.player1
             self.oPlayer = self.player2
             for j in range(0,2):
-                print('Round {} Turn {} '.format(i,j))
+                print('Round {} Phase {} Turn {}. {} draws :'.format(game_round[0] , i + 1, j + 1, self.cPlayer.name))
                 self.cPlayer.draw(self.deck, 1)
+                self.cPlayer.pshow()
                 print('{} Move: '.format(self.cPlayer.name), end=' ')
-                self.redirect(input())
+                if self.cPlayer.name == 'Random':
+                    self.random_move()
+                else: 
+                    self.redirect(input())
                 self.show_table()
                 self.cPlayer = self.player2
                 self.oPlayer = self.player1
+        print('Play stored cards')
         if self.player1.store.cards != []:
             move(self.player1.store, self.player1.played, self.player1.store.cards[0].id)
         if self.player2.store.cards != []:
             move(self.player2.store, self.player2.played, self.player2.store.cards[0].id)
         self.show_table()
-        self.result = self.win()
+        self.win()
+
+    def random_move(self):
+        movs = ['Discard', 'Store', 'Trade 3x1', 'Trade 2x2']
+        l = random.randint(0, 3)
+        if movs[l] == 'Discard' and self.cPlayer.moves[0] == 0:
+            select = random.sample(self.cPlayer.hand.cards, 2)
+            print('Discard: {} {}'. format(select[0].id, select[1].id))
+            self.discard(select[0].id, select[1].id)
+            self.cPlayer.moves[0] = 1
+        
+        elif movs[l] == 'Store' and self.cPlayer.moves[1] == 0:
+            select = random.sample(self.cPlayer.hand.cards, 1)
+            print('Store: {}'. format(select[0].id))
+            self.store(select[0].id)
+            self.cPlayer.moves[1] = 1
+        
+        elif movs[l] == 'Trade 3x1' and self.cPlayer.moves[2] == 0:
+            select = random.sample(self.cPlayer.hand.cards, 3)
+            print('Trade 3x1: {} {} {}'. format(select[0].id, select[1].id, select[2].id))
+            self.trade3x1(select[0].id, select[1].id, select[2].id)
+            self.cPlayer.moves[2] = 1
+
+        elif movs[l] == 'Trade 2x2' and self.cPlayer.moves[3] == 0:   
+            select = random.sample(self.cPlayer.hand.cards, 4)
+            print('Trade 2x2: {} {} {} {}'. format(select[0].id, select[1].id, select[2].id, select[3].id))
+            self.trade2x2(select[0].id, select[1].id, select[2].id, select[3].id)
+            self.cPlayer.moves[3] = 1
+        else:
+            print('Move already used')
+            self.random_move()
 
     def redirect(self, inpt):
-        if inpt == 'Discard':
-            self.discard(input('First discard: '), input('Second discard: '))
-           
-        elif inpt == 'Store':
-            self.store(input('Store: '))
-           
-        elif inpt == 'Trade 3x1':
-            self.trade3x1(input('First trade: '), input('Second trade: '), input('Third trade: '))
+        if inpt == 'Random':
+            self.random_move()
 
-        elif inpt == 'Trade 2x2':   
+        elif inpt == 'Discard' and self.cPlayer.moves[0] == 0:
+            self.discard(input('First discard: '), input('Second discard: '))
+            self.cPlayer.moves[0] = 1
+           
+        elif inpt == 'Store' and self.cPlayer.moves[1] == 0:
+            self.store(input('Store: '))
+            self.cPlayer.moves[1] = 1
+           
+        elif inpt == 'Trade 3x1' and self.cPlayer.moves[2] == 0:
+            self.trade3x1(input('First trade: '), input('Second trade: '), input('Third trade: '))
+            self.cPlayer.moves[2] = 1
+
+        elif inpt == 'Trade 2x2' and self.cPlayer.moves[3] == 0:   
             self.trade2x2(input('First pair: '), input('- '), input('Second pair: '), input('- '))
+            self.cPlayer.moves[3] = 1
+        else:
+            print('Move already used')
                 
     def discard(self, inpt1, inpt2):
         print('{} Discards  '.format(self.cPlayer.name), end=' ')
@@ -223,7 +268,11 @@ class HanamikojiEngine:
 
     def trade2x2(self, a1, a2, b1, b2):
         print('{}'.format(self.oPlayer.name), end=' ')
-        inpt = input('chooses: ') #1,2
+        if self.oPlayer.name == 'Random':
+            inpt = random.randint(1,2)
+            print('Chooses: {}'.format(inpt))
+        else:
+            inpt = input('chooses: ') #1,2
         lst = [[a1, a2], [b1, b2]]
         choice = lst.pop(int(inpt)-1)
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
@@ -231,7 +280,11 @@ class HanamikojiEngine:
         
     def trade3x1(self, a, b, c):
         print('{}'.format(self.oPlayer.name), end=' ')
-        inpt = input('Chooses: ') #1,2,3
+        if self.oPlayer.name == 'Random':
+            inpt = random.randint(1,3)
+            print('Chooses: {}'.format(inpt))
+        else:
+            inpt = input('Chooses: ') #1,2,3
         lst = [a, b, c]
         choice = [lst.pop(int(inpt)-1)]
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
@@ -270,7 +323,9 @@ class HanamikojiEngine:
         self.deck.printdeck()
         print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')     
 
-game = HanamikojiEngine()
+name_player1 = input('Enter Player 1 name:') #Enter 'Random' for random player 
+name_player2 = input('Enter Player 2 name:')
+game = HanamikojiEngine(name_player1, name_player2)
 game.start()
 game.interactive()
 
