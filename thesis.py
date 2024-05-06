@@ -5,11 +5,13 @@ import copy
 from colorama import Back, Back, init
 init(autoreset=True)
 
-#random.seed(10)
+random.seed(10)   #11 = win first round, 10 = not
 
 carryon = [0, 0, 0, 0, 0, 0, 0]
 game_round = [0]
 num_phases = 4
+pointer = [0]
+all_moves = []
 
 class Card:
 
@@ -155,7 +157,7 @@ class HanamikojiEngine:
         self.player2.draw(self.deck, 6)
         self.show_table()
 
-    def win(self, mode):
+    def win(self):
         colours = [2,2,2,3,3,4,5]
         points1 = 0
         geishas1 = 0
@@ -184,24 +186,22 @@ class HanamikojiEngine:
         
         if points1 >= 11:  
             print('Player 1 wins')
-            self.winner == 1
+            self.winner = 1
         elif points2 >= 11:
             print('Player 2 wins')
-            self.winner == -1
+            self.winner = -1
         elif geishas1 >= 4:
             print('Player 1 wins')
-            self.winner == 1
-        elif geishas2 >= 4 :
+            self.winner = 1
+        elif geishas2 >= 4:
             print('Player 2 wins')
-            self.winner == -1
+            self.winner = -1
         else:
             print('No winner yet') 
             round2 = HanamikojiEngine(name_player1, name_player2)
             round2.start()
-            if mode == 'interactive':
-                round2.interactive()
-            elif mode == 'bot':
-                return round2
+        all_moves.append(self.winner)
+        
             
 
     def is_game_over(self):
@@ -227,7 +227,9 @@ class HanamikojiEngine:
                 self.oPlayer = self.player1
         self.play_stored()
         self.show_table()
-        self.win('interactive')
+        next_round = self.win()
+        if self.winner == 0:
+            next_round.interactive()
 
     def play_stored(self):
         print('Play stored cards')
@@ -236,7 +238,6 @@ class HanamikojiEngine:
         if self.player2.store.cards != []:
             move(self.player2.store, self.player2.played, self.player2.store.cards[0].id)
         
-
     def random_move(self):
         movs = ['Store', 'Discard', 'Trade 3x1', 'Trade 2x2']
         l = random.randint(0, 3)
@@ -272,6 +273,9 @@ class HanamikojiEngine:
 
     def monte_carlo(self, action):   #action :[[cards], [move]]            [[['3o', '2p'], ['5b', '3b']], ['Trade2x2', 0, 4]]
         print(action)
+        all_moves.append(action)
+
+
         if action[1][0] == 'Store' and self.cPlayer.moves[0][1] == 0:
             self.store(action[0][0])
             self.cPlayer.moves[0][1] = 1
@@ -287,6 +291,7 @@ class HanamikojiEngine:
         elif action[1][0] == 'Trade 2x2' and self.cPlayer.moves[3][1] == 0:   
             self.trade2x2(action[0][0][0], action[0][0][1], action[0][1][0], action[0][1][1])
             self.cPlayer.moves[3][1] = 1
+       
         else:
             print('Move already used')
 
@@ -294,9 +299,13 @@ class HanamikojiEngine:
         self.switch_players()
 
         if self.turn_over():
-            self.win('bot')
-
-        self.cPlayer.draw(self.deck, 1)
+            self.win()
+            if self.winner == 0:
+                print('round2')
+                return 0
+                #self = HanamikojiEngine(name_player1, name_player2)
+        #self.deck.printdeck()
+        #self.cPlayer.draw(self.deck, 1)
 
     def switch_players(self):
         if self.cPlayer == self.player1:
@@ -444,7 +453,6 @@ def get_legal_actionss(games):
             print(legal_actions)
             print(len(legal_actions))
 
-
 #monte carlo tree search
 
 import numpy as np
@@ -471,14 +479,16 @@ class MonteCarloTreeSearchNode():
         return self._untried_actions
 
     def n(self):
-        print('n')
         return self._number_of_visits
+
+    def q(self):
+        print(self._results)
+        return self._results[1] #times won
 
     def expand(self):
         print('expand open')
         action = self._untried_actions.pop()
         next_state = self.move(action)
-        next_state.show_table()
         child_node = MonteCarloTreeSearchNode(next_state, parent=self, parent_action=action)
         self.children.append(child_node)
         print('expand close')
@@ -493,6 +503,7 @@ class MonteCarloTreeSearchNode():
         current_rollout_state = self
 
         while not current_rollout_state.is_game_over():
+            print(all_moves)
             possible_moves = current_rollout_state.get_legal_actions()
             action = self.rollout_policy(possible_moves)
             current_rollout_state.state = current_rollout_state.move(action)
@@ -502,7 +513,7 @@ class MonteCarloTreeSearchNode():
     def backpropagate(self, result):
         print('backpropagate')
         self._number_of_visits += 1.
-        self._results[result] += 1.
+        self._results[result] += 1.   #q
         if self.parent:
             self.parent.backpropagate(result)
 
@@ -512,7 +523,9 @@ class MonteCarloTreeSearchNode():
 
     def best_child(self, c_param=0.1):
         print('bestchild')
+        print(len(self.children))
         choices_weights = [(c.q() / c.n()) + c_param * np.sqrt((2 * np.log(self.n()) / c.n())) for c in self.children]
+        print('done')
         return self.children[np.argmax(choices_weights)]
 
     def rollout_policy(self, possible_moves):
@@ -531,7 +544,7 @@ class MonteCarloTreeSearchNode():
 
     def best_action(self):
         print('bestaction')
-        simulation_no = 10
+        simulation_no = 1000
 
         for i in range(simulation_no):
             v = self._tree_policy()
@@ -543,6 +556,9 @@ class MonteCarloTreeSearchNode():
     def get_legal_actions(self): 
             print('getlegalactions')
             legal_actions = []
+            #self.state.show_table()
+            if len(self.state.deck.cards) > 0:
+                self.state.cPlayer.draw(self.state.deck, 1)
             for m in self.state.cPlayer.moves:
                 if m[1] == 0:
                     if m[0] == 'Trade 2x2':
@@ -557,7 +573,6 @@ class MonteCarloTreeSearchNode():
                                 k = list(combi[i])
                                 k.remove(pair[0])
                                 k.remove(pair[1])
-                                #k = set(combi[i]) - set(pair) 
                                 double_pair = [k, list(pair)]
                                 double_pairs.append(double_pair)
 
@@ -576,53 +591,29 @@ class MonteCarloTreeSearchNode():
             print(len(legal_actions))
             return legal_actions
 
-            #Modify according to your game or needs. Constructs a list of all possible states from current state.
-            #Returns a list.from current player get all actions left
-
-
     def is_game_over(self):
         print('isgameover?')
-        print(self.state.winner)
         return self.state.winner != 0 
 
     def game_result(self):
         print('gameresult')
+        self.state.show_table()
         return self.state.winner
 
     def move(self,action):  #action: [[],[]]
         print('move')
         new_state = copy.deepcopy(self.state)
-        new_state.monte_carlo(action)
-
+        l = new_state.monte_carlo(action)
+        if l == 0:
+            print('No winner, new round')
+            new_state = HanamikojiEngine(name_player1, name_player2)
+            new_state.start()
         return new_state
-
-        #return: state: game.copy
-        #self.state = copy.deepcopy(action)
-
-        '''
-        -previos state: game
-        - action [[['3o', '2p'], ['5b', '3b']], ['Trade2x2', 0, 4]]   [[cards],[name]]
-        Modify according to your game or 
-        needs. 
-        
-        Changes the state of your board with a new value. 
-        
-        or a normal Tic Tac Toe game, it can be a 3 by 3
-        array with all the elements of array
-        being 0 initially. 0 means the board 
-        position is empty. If you place x in
-        row 2 column 3, then it would be some 
-        thing like board[2][3] = 1, where 1
-        represents that x is placed. Returns 
-        the new state after making a move.
-        '''
 
 state = copy.deepcopy(game)
 
 def main():
         root = MonteCarloTreeSearchNode(state,None)
-        print('done')
-        print(root)
         selected_node = root.best_action()
         return 
 
@@ -633,4 +624,6 @@ main()
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+
+
 
