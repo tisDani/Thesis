@@ -13,6 +13,7 @@ np.random.seed(SEED)
 random.seed(SEED)   #11 = win first round, 10 = not
 
 cunter = [0]
+cnter = [0]
 
 carryon = [0, 0, 0, 0, 0, 0, 0]
 game_round = [0]
@@ -21,7 +22,7 @@ pointer = [0]
 all_moves = []
 all_choices = []
 node_history = []
-S = 1
+S = 2
 
 
 def print_all():
@@ -61,12 +62,24 @@ class Player:
         self.moves = [['Store', 0, 1], ['Discard', 0, 2], ['Trade 3x1', 0, 3], ['Trade 2x2', 0, 4]]
 
     def draw(self, deck, num):
-        if len(deck.cards) <= 1:
-            print('last card')
-        else:
-            print(' {} draw'.format(self.name), end = ' ')
+        if num > 1:
+            print(' {} draws hand'.format(self.name), end = ' ')
             deck.deal(self.hand, num)  #take n cards from deck
             self.hand.printdeck()
+            return
+
+        if len(deck.cards) <= 1:
+            print('last card')
+
+        elif deck.last_draw == self.name or (deck.last_draw == 'Monte Carlo' and self.name == 'Monte Carlo Expand'):
+            all_moves.append(['repeat', deck.last_draw, self.name])
+            return
+
+        else:
+            print(' {} draw, last was {}'.format(self.name, deck.last_draw), end = ' ')
+            deck.deal(self.hand, num)  #take n cards from deck
+            self.hand.printdeck()
+            deck.last_draw = self.name
     
     def pshow(self):
         print("\n {} {: >20} {: >25} {: >20}   ".format(self.name, 'Hand', 'Discard', 'Store'))
@@ -79,6 +92,7 @@ class Deck:
     cards = None
     name = None
     score = None
+    last_draw = None
 
     def __init__(self, name):
         self.cards = []
@@ -178,7 +192,6 @@ class HanamikojiEngine:
         self.sample_deck.build_sample()
         self.player1.draw(self.deck, 6)
         self.player2.draw(self.deck, 6)
-        #self.show_table()
 
     def win(self):
         colours = [2,2,2,3,3,4,5]
@@ -263,14 +276,28 @@ class HanamikojiEngine:
     def random_move(self):
         print('random move')
         movs = ['Store', 'Discard', 'Trade 3x1', 'Trade 2x2']
-        l = 2
-        #l = random.randint(0, 3) 
+        l = random.randint(0, 3) 
         select = []
         action = []
         
         all_moves.append(['random move' , action, self.cPlayer.name])
-        
-        if self.cPlayer.moves[0][1] == 1 and self.cPlayer.moves[1][1] == 1 and self.cPlayer.moves[2][1] == 1 and self.cPlayer.moves[3][1] == 1:
+        if self.decision == 'trade':
+            if len(self.trade) == 4:
+                inpt = random.randint(1,2)
+                self.trade2x2_inpt(self.trade, inpt)
+                print('4...')
+                self.decision = 'move'
+                self.switch_players()
+                return
+            elif len(self.trade) == 3:
+                inpt = random.randint(1,3)
+                self.trade3x1_inpt(self.trade, inpt)
+                print('3...')
+                self.decision = 'move'
+                self.switch_players()
+                return
+
+        elif self.cPlayer.moves[0][1] == 1 and self.cPlayer.moves[1][1] == 1 and self.cPlayer.moves[2][1] == 1 and self.cPlayer.moves[3][1] == 1:
             print('all moves used')
         elif movs[l] == 'Store' and self.cPlayer.moves[0][1] == 0:
             select = random.sample(self.cPlayer.hand.cards, 1)
@@ -290,21 +317,31 @@ class HanamikojiEngine:
             print('trade 3x1')
             select = random.sample(self.cPlayer.hand.cards, 3)
             print('Trade 3x1: {} {} {}'. format(select[0].id, select[1].id, select[2].id))
-            self.trade3x1(select[0].id, select[1].id, select[2].id)
             self.cPlayer.moves[2][1] = 1
+            hi = self.trade3x1(select[0].id, select[1].id, select[2].id)
+            print('random 3 trade finished')
+            print(hi)
+            self = hi
             action.append(movs[l])
+            return hi
 
         elif movs[l] == 'Trade 2x2' and self.cPlayer.moves[3][1] == 0:   
             print('trade 2x2')
             select = random.sample(self.cPlayer.hand.cards, 4)
             print('Trade 2x2: {} {} {} {}'. format(select[0].id, select[1].id, select[2].id, select[3].id))
-            self.trade2x2(select[0].id, select[1].id, select[2].id, select[3].id)
             self.cPlayer.moves[3][1] = 1
+            hi = self.trade2x2(select[0].id, select[1].id, select[2].id, select[3].id)
+            print('random 2 trade finished')
+            print(hi)
+            self = hi
             action.append(movs[l])
+            return hi
         else:
             print('Move already used')
+            cnter[0] += 1 
             print(self.cPlayer.moves)
-            self.random_move()
+            if cnter[0] < 4:
+                self.random_move()
 
         for card in select:
             action.append(card.id)
@@ -318,22 +355,16 @@ class HanamikojiEngine:
         print(self.decision)
         all_moves.append(['Monte Carlo ' , action, self.cPlayer.name])
 
-
         if action[1] == 'trade 3x1':#[2, 'trade 2x2']
             print('trade 3x1 MC yes')
-            print(self.trade)
-            self.show_table()
-            print(action)
             self.trade3x1_inpt(self.trade, action[0])
-            self.show_table()
             self.decision = 'move'
 
         elif action[1] == 'trade 2x2':    #[2, 'trade 2x2']
             print('trade 2x2 MC yes')
+            print(action[0])
             print(self.trade)
-            print(action)
             self.trade2x2_inpt(self.trade, action[0])
-            self.show_table()
             self.decision = 'move'
 
         elif action[1][0] == 'Store' and self.cPlayer.moves[0][1] == 0:
@@ -344,35 +375,26 @@ class HanamikojiEngine:
             self.discard(action[0][0], action[0][1])
             self.cPlayer.moves[1][1] = 1
            
-
-
         elif action [1][0] == 'Trade 3x1' and self.decision == 'move' and self.cPlayer.moves[2][1] == 0:
             self.decision = 'trade'
-            print('works?')
+            if len(self.trade) != 0:
+                self.trade = []
             for card in action[0]:
                 self.trade.append(card)
-
             self.cPlayer.moves[2][1] = 1
             return
 
         elif action [1][0] == 'Trade 2x2' and self.decision == 'move' and self.cPlayer.moves[3][1] == 0:
             self.decision = 'trade'
-            print('works?')
+            if len(self.trade) != 0:
+                self.trade = []
             for card in action[0]:
                 self.trade.append(card[0])
                 self.trade.append(card[1])
-
             self.cPlayer.moves[3][1] = 1
             return
         
-        elif action[1][0] == 'Trade 3x1' and self.decision == 'trade':   
-            print(action)
-            self.decision = 'move'
-            self.trade3x1(action[0][0][0], action[0][0][1], action[0][1][0], action[0][1][1])
-            print('done')
-
-        elif action[1][0] == 'Trade 3x1' and self.cPlayer.moves[2][1] == 0:
-            print('hoi??')
+        elif action[1][0] == 'Trade 3x1' and self.decision == 'trade':
             self.decision = 'move'
             self.trade3x1(action[0][0], action[0][1], action[0][2])
             self.cPlayer.moves[2][1] = 1
@@ -380,7 +402,6 @@ class HanamikojiEngine:
         elif action[1][0] == 'Trade 2x2' and self.decision == 'trade':   
             self.decision = 'move'
             self.trade2x2(action[0][0][0], action[0][0][1], action[0][1][0], action[0][1][1])
-            print('done')
             self.cPlayer.moves[3][1] = 1
        
         else:
@@ -449,32 +470,40 @@ class HanamikojiEngine:
         choice = [trade.pop(int(inpt)-1)]
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
         mul_move(self.cPlayer.hand, self.cPlayer.played, trade)
-        self.cPlayer.moves[2][1] = 1
 
     def trade2x2_inpt(self, trade, inpt):   #trade: [a1, a2, b1, b2]
         lst = [[trade[0], trade[1]], [trade[2], trade[3]]]
         choice = lst.pop(int(inpt)-1)
+        print('2x2inpt choose{} from  '.format(choice))
+        self.cPlayer.hand.printdeck()
         mul_move(self.cPlayer.hand, self.oPlayer.played, choice)
         mul_move(self.cPlayer.hand, self.cPlayer.played, lst[0])
-        self.cPlayer.moves[3][1] = 1
 
     def trade2x2(self, a1, a2, b1, b2):
         print('{}'.format(self.oPlayer.name), end=' ')
         if self.oPlayer.name == 'Monte Carlo Expand':
+            self.decision = 'trade'
             self.trade = [a1, a2, b1, b2]
-            new_node = MonteCarloTreeSearchNode(state = self, parent = None, decision= 'trade')  #needs to return 1 or 2
-            new_node.untried_actions()
+            out = copy.deepcopy(self)
+            new_node = MonteCarloTreeSearchNode(state = self, parent = None, decision= 'trade')  #ROOT!
+            new_node.untried_actions()  #indeed, 1,2,3
             node_history.append(copy.deepcopy(new_node))
-            all_moves.append(['interesting 2x2 trade', self.trade])
-            #heere rollout
-            inpt = new_node.decide() # 1 or 2
-            pass
+            all_moves.append(['interesting 2x2 trade', self.trade, self.oPlayer.name, self.cPlayer.name])
+            sel_node = new_node.best_action()    #returns state with trade done, sel_node is a node
+            out.monte_carlo(sel_node.parent_action) 
+            self = out
+            print ('pretty please')
+            self.show_table()
+            out.show_table()
+            #all_moves.append(['Best child trade', sel_node.parent_action, sel_node.state.cPlayer.name])
+            return out
             #mc_trade
             #need to make a Monte Carlo agent that can analyze the outcomes of trades. 
             #This means making a new node in the game tree where decisions happen - expand game tree. Or Make a different MC agent just for decisions
         elif self.oPlayer.name == 'Random 2' or self.oPlayer.name == 'Random 1' or self.oPlayer.name == 'Monte Carlo Rollout':
             inpt = random.randint(1,2)
             print('Chooses: {}'.format(inpt))
+            all_moves.append([inpt, self.oPlayer.name])
         else:
             inpt = input('chooses: ') #1,2
         lst = [[a1, a2], [b1, b2]]
@@ -489,24 +518,18 @@ class HanamikojiEngine:
             self.decision = 'trade'
             self.trade = [a, b, c]
             out = copy.deepcopy(self)
-            print('out..')
-            out.show_table()
             new_node = MonteCarloTreeSearchNode(state = self, parent = None, decision= 'trade')  #ROOT!
             new_node.untried_actions()  #indeed, 1,2,3
             node_history.append(copy.deepcopy(new_node))
             all_moves.append(['interesting 3x1 trade', self.trade, self.oPlayer.name, self.cPlayer.name])
-            print('----------------------------------------------------------?----------------------')
-            print(self.trade)
             sel_node = new_node.best_action()    #returns state with trade done, sel_node is a node
-            print('sel node')
-            print(sel_node.parent_action)
             out.monte_carlo(sel_node.parent_action) 
-            print('out...')
-            out.show_table()
-            print('.......')
             self = out
+            print ('pretty please2')
+            self.show_table()
+            out.show_table()
             #all_moves.append(['Best child trade', sel_node.parent_action, sel_node.state.cPlayer.name])
-            return
+            return out
         elif self.oPlayer.name == 'Random 1' or self.oPlayer.name == 'Random 2' or self.oPlayer.name == 'Monte Carlo Rollout':
             inpt = random.randint(1,3)
             print('Chooses: {}'.format(inpt))
@@ -598,56 +621,48 @@ class MonteCarloTreeSearchNode():
         self.state.player1.name = 'Monte Carlo Expand'
         action = self._untried_actions.pop()
         print(action)
-        print(action)
         if action[1][0] == 'Trade 2x2':
-            self.decision = 'trade'
-            self.state.decision = 'trade'
+            print('expand 2x2')
+            next_node = copy.deepcopy(self)
+            next_node.decision = 'trade'
+            next_node.state.decision = 'trade'
+            if len(next_node.state.trade) != 0:
+                next_node.state.trade = []
             for card in action[0]:
-                self.state.trade.append(card[0])
-                self.state.trade.append(card[1])
-            
-            next_state = copy.deepcopy(self.state)
-            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision='trade', parent_action=action)
+                next_node.state.trade.append(card[0])
+                next_node.state.trade.append(card[1])
+            next_node.state.cPlayer.moves[3][1] = 1
+            child_node = MonteCarloTreeSearchNode(next_node.state, parent=self, decision='trade', parent_action=action)
             node_history.append(copy.deepcopy(child_node))
 
-        
         elif action[1][0] == 'Trade 3x1' :
-            self.decision = 'trade'
-            self.state.decision = 'trade'
+            print('expand 3x1')
+            next_node = copy.deepcopy(self)
+            next_node.decision = 'trade'
+            next_node.state.decision = 'trade'
+            if len(next_node.state.trade) != 0:
+                next_node.state.trade = []
             for card in action[0]:
-                self.state.trade.append(card)
-            
-            next_state = copy.deepcopy(self.state)
-            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision='trade', parent_action=action)
+                next_node.state.trade.append(card)
+            next_node.state.cPlayer.moves[2][1] = 1
+            child_node = MonteCarloTreeSearchNode(next_node.state, parent=self, decision='trade', parent_action=action)
             node_history.append(copy.deepcopy(child_node))
 
         elif self.decision == 'trade':
             print('expand trade')
-            self.state.choice = action[0]
-            self.move(action)
-            #self.state.decision = 'move'
+            next_node = copy.deepcopy(self)
+            next_node.state.choice = action[0]
+            next_node.move(action)
+            self.decision = 'move'
             next_state = copy.deepcopy(self.state)
-            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision='after', parent_action=action)
+            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision='move', parent_action=action)
             node_history.append(copy.deepcopy(child_node))
-        if self.decision == 'after':
-            print('expand after')
-            if len(self.state.trade) == 3:
-                print('\n?????????????????????????????????????????????????????????????????????????')
-                self.state.trade3x1_inpt(self.state.trade, action)
-            elif len(self.state.trade) == 4:
-                self.state.trade2x2_inpt(self.state.trade, action)#state where the trade has been accepted     action == 1 or 2, random
-             
-            self.state.switch_players()
-            self.state.cPlayer.draw(self.state.deck, 1)  
-            next_state = copy.deepcopy(self.state)
-            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision = 'move', parent_action=action)
-            node_history.append(copy.deepcopy(child_node))
-            child_node.state.show_table()
 
         if self.decision == 'move':
             print('expand move')
-            next_state = self.move(action)
-            child_node = MonteCarloTreeSearchNode(next_state, parent=self, decision = 'move', parent_action=action)
+            next_node = copy.deepcopy(self)
+            next_node.move(action)
+            child_node = MonteCarloTreeSearchNode(next_node.state, parent=self, decision = 'move', parent_action=action)
             node_history.append(copy.deepcopy(child_node))
         self.children.append(child_node)
         print('expand close')
@@ -658,11 +673,14 @@ class MonteCarloTreeSearchNode():
 
     def rollout(self):
         print('rollout')
+        print(self.state.decision)
+        print(self.decision)
         while self.state.winner == 0:
             print('\n rolling')
             self.state.player1.name = 'Monte Carlo Rollout'
             possible_moves = self.get_legal_actions()
             action = self.rollout_policy(possible_moves)
+            #rollout_copy = copy.deepcopy(self)
             self.move(action) 
         print('rollout close')
         return self.game_result()
@@ -693,8 +711,9 @@ class MonteCarloTreeSearchNode():
 
     def rollout_policy(self, possible_moves):
         if len(possible_moves) == 0:
-            self.state
             print('no moves')
+            print(self.state.player1.moves)
+            print(self.state.player2.moves)
             for move in all_moves:
                 print(move)
         else:
@@ -713,6 +732,10 @@ class MonteCarloTreeSearchNode():
         simulation_no = S
 
         for i in range(simulation_no):
+            print('simulation {} '.format(i))
+            all_moves.append(['simulation', i])
+            #root_node = copy.deepcopy(self)
+            self.state.show_table()
             v = self._tree_policy()   #checks if it's terminal, if not expand, if yes return best child??
             reward = v.rollout()      #go till the end randomly, return 1 or -1
             v.backpropagate(reward)   #update fractions
@@ -722,15 +745,14 @@ class MonteCarloTreeSearchNode():
 
     def get_legal_actions(self): 
             print('getlegalactions')
-            
+            #print(self.state.player1.moves)
+            #print(self.state.player2.moves)
             print(self.state.decision)
-            #print('decision')
-            #print(self.decision)
+        
             legal_actions = []
             if self.state.decision == 'trade':
                 print('legal actions trade')
                 print(self.state.trade)   #should be [cards]
-                #print(self.trade)   #should be [cards]
                 if len(self.state.trade) == 3:
                     legal_actions.append([1, 'trade 3x1'])
                     legal_actions.append([2, 'trade 3x1'])
@@ -738,7 +760,6 @@ class MonteCarloTreeSearchNode():
                 elif len(self.state.trade) == 4:
                     legal_actions.append([1, 'trade 2x2'])
                     legal_actions.append([2, 'trade 2x2'])
-                print(legal_actions)
             elif self.state.decision == 'after':
                 print('legal actions after')
                 for m in self.state.cPlayer.moves:
@@ -841,16 +862,29 @@ def MC_vs_random(game):
     for i in range(0,2):
         print('\n 000000000000000000000000000000000000000000000000000000000000000000000000000 {}'.format(i))
         game.show_table()
+        print(game.player1.moves)
+        print(game.player2.moves)
         game.new_round_p()
         all_moves.append(['Round', i])
-        out = main('move')  #Each decision has it's own monte Carlo tree
-        print('tadaaa')
+        out = main('move')  #Each decision has it's own monte Carlo tree, out should be the best child node. Now Idk what it is
         out.state.show_table()
         game.monte_carlo(out.parent_action)
+        if game.decision == 'trade':
+            print(game.cPlayer.name)
+            print('good bug')
+            game.random_move()
+            print(game.cPlayer.name)
+        print('hi')
         game.show_table()
         game.cPlayer.draw(state.deck, 1)
-        game.random_move()
-        print_all()
+        hhi = game.random_move()
+        print(hhi)
+        if hhi != None:
+            print('hhi')
+            hhi.show_table
+            game = hhi
+            game.show_table()
+        #print_all()
         print('round over')
         #history(node_history)
 
@@ -860,13 +894,14 @@ def history(node_list):
         node.state.show_table()        
 
 MC_vs_random(state)
-state.win()
-print('here?')
-if state.winner == 0:  
-    new_state = HanamikojiEngine(name_player1, name_player2)
-    new_state.start()
-    new_state.cPlayer.draw(new_state.deck, 1)
-    MC_vs_random(new_state)
+state.show_table()
+print('the end')
+#state.win()
+#if state.winner == 0:  
+#    new_state = HanamikojiEngine(name_player1, name_player2)
+#    new_state.start()
+#    new_state.cPlayer.draw(new_state.deck, 1)
+#    MC_vs_random(new_state)
 
 #print(out.parent.choices)
 #print(out.parent_action) #is monte carlo tree search: to get move find parent_action
