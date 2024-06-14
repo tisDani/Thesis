@@ -4,35 +4,39 @@ from itertools import combinations
 import copy
 import csv
 import gc
+from datetime import datetime
+
 from colorama import Back, Back, init
 init(autoreset=True)
 
 import pandas as pd
-#pd.options.display.max_rows = 10
-#np.set_printoptions(precision=4, suppress=True)
 
 SEED = 10
 import os
-os.environ["PYTHONHASHSEED"] = str(SEED)
+#os.environ["PYTHONHASHSEED"] = str(SEED)
 
 import numpy as np
 from collections import defaultdict
-np.random.seed(SEED)
-random.seed(SEED)   #11 = win first round, 10 = not
+#np.random.seed(SEED)
+#random.seed(SEED)   #11 = win first round, 10 = not
 
 cnter = [0]
+indx = [0]
 C_SEL = 1.4
 C_CHOICE = 0.2
-N_SIM_B = 1000
+N_SIM_B = 100
 N_SIM_M = 300
 N_SIM_T = 100
+
 
 PARAMETERS = [C_SEL, C_CHOICE, N_SIM_B, N_SIM_M, N_SIM_T]
 
 carryon = [0, 0, 0, 0, 0, 0, 0]
 game_round = [0]
 all_moves = []
-childs = [PARAMETERS, ['round', 'parent move', 'fraction', 'c-value']]
+childss = [['round', 'move', 'fraction', 'c-value']]
+childs = [ ['a', 'b', 'c', 'd', 'e', 'f'], PARAMETERS]
+
 
 def print_all():
     for move in all_moves:
@@ -310,7 +314,7 @@ class HanamikojiEngine:
                 self.trade2x2_inpt(self.trade, inpt)
                 self.decision = 'move'
                 self.switch_players()
-                childs.append([['Random move answer 2x2'], [self.cPlayer.name], [inpt], [self.trade] ])
+                childs.append([['Random move answer 2x2'], [inpt], [self.trade] ])
                 return
             elif len(self.trade) == 3:
                 inpt = random.randint(1,3)
@@ -318,7 +322,7 @@ class HanamikojiEngine:
                 self.trade3x1_inpt(self.trade, inpt)
                 self.decision = 'move'
                 self.switch_players()
-                childs.append([[['Random move answer 3x1'], [self.cPlayer.name], [inpt], [self.trade] ]])
+                childs.append([[['Random move answer 3x1'], [inpt], [self.trade] ]])
                 return
 
         elif self.cPlayer.moves[0][1] == 1 and self.cPlayer.moves[1][1] == 1 and self.cPlayer.moves[2][1] == 1 and self.cPlayer.moves[3][1] == 1:
@@ -329,20 +333,20 @@ class HanamikojiEngine:
             print('Store: {}'. format(select[0].id))
             self.store(select[0].id)
             self.cPlayer.moves[0][1] = 1
-            childs.append([[['Random move Store'], [self.oPlayer.name],[select[0].id] ]])
+            childs.append([[['Random move Store'],[select[0].id] ]])
         
         elif movs[l] == 'Discard' and self.cPlayer.moves[1][1] == 0:
             select = random.sample(self.cPlayer.hand.cards, 2)
             print('Discard: {} {}'. format(select[0].id, select[1].id))
             self.discard(select[0].id, select[1].id)
             self.cPlayer.moves[1][1] = 1
-            childs.append([[['Random move Discard'], [self.oPlayer.name], [select[0].id, select[1].id]]])
+            childs.append([[['Random move Discard'], [select[0].id, select[1].id]]])
         
         elif movs[l] == 'Trade 3x1' and self.cPlayer.moves[2][1] == 0:
             select = random.sample(self.cPlayer.hand.cards, 3)
             print('Trade 3x1: {} {} {}'. format(select[0].id, select[1].id, select[2].id))
             self.cPlayer.moves[2][1] = 1
-            childs.append([['Random move 3x1 trade'], [self.cPlayer.name], [select[0].id, select[1].id, select[2].id]])
+            childs.append([['Random move 3x1 trade'], [select[0].id, select[1].id, select[2].id]])
             self.trade3x1(select[0].id, select[1].id, select[2].id)
             return 
 
@@ -350,7 +354,7 @@ class HanamikojiEngine:
             select = random.sample(self.cPlayer.hand.cards, 4)
             print('Trade 2x2: {} {} {} {}'. format(select[0].id, select[1].id, select[2].id, select[3].id))
             self.cPlayer.moves[3][1] = 1
-            childs.append([['Random move 2x2 trade'], [self.cPlayer.name], [select[0].id, select[1].id, select[2].id, select[3].id]])
+            childs.append([['Random move 2x2 trade'], [select[0].id, select[1].id, select[2].id, select[3].id]])
             self.trade2x2(select[0].id, select[1].id, select[2].id, select[3].id)
             return 
         else:
@@ -372,11 +376,13 @@ class HanamikojiEngine:
             #print('trade 3x1 MC ')
             self.trade3x1_inpt(self.trade, action[0])
             self.decision = 'move'
+            self.choice = action[0]
 
         elif action[1] == 'trade 2x2':    #[2, 'trade 2x2']
             #print('trade 2x2 MC ')
             self.trade2x2_inpt(self.trade, action[0])
             self.decision = 'move'
+            self.choice = action[0]
 
         elif action[1][0] == 'Store' and self.cPlayer.moves[0][1] == 0:
             self.store(action[0][0])
@@ -426,7 +432,6 @@ class HanamikojiEngine:
                 return 0
 
     def switch_players(self):
-        #print('switch players')
         if self.cPlayer == self.player1:
             self.cPlayer = self.player2
             self.oPlayer = self.player1
@@ -497,6 +502,7 @@ class HanamikojiEngine:
             root_node.untried_actions()  #indeed, 1,2,3
             out = root_node.best_action()    #returns state with trade done, sel_node is a node
             self.monte_carlo(out.parent_action) 
+            childs.append(['Na', out.parent_action])
             return 
             #mc_trade
             #need to make a Monte Carlo agent that can analyze the outcomes of trades. 
@@ -522,6 +528,7 @@ class HanamikojiEngine:
             root_node.untried_actions()  #indeed, 1,2,3
             out = root_node.best_action()    #returns state with trade done, sel_node is a node
             self.monte_carlo(out.parent_action) 
+            childs.append(['Na', out.parent_action])
             return 
         elif self.oPlayer.name == 'Random 1' or self.oPlayer.name == 'Random 2' or self.oPlayer.name == 'Monte Carlo Rollout':
             inpt = random.randint(1,3)
@@ -572,12 +579,14 @@ class HanamikojiEngine:
         table = [self.deck.deck_id(), self.player1.ptable(), self.player2.ptable()]
         return table
 
-if input('Both Random? ') == 'yes':
-    name_player1 = 'Monte Carlo'
-    name_player2 = 'Random 2'
-else:
-    name_player1 = input('Enter Player 1 name:') #Enter 'Random' for random player 
-    name_player2 = input('Enter Player 2 name:')
+#if input('Both Random? ') == 'yes':
+
+
+name_player1 = 'Monte Carlo'
+name_player2 = 'Random 2'
+#else:
+#    name_player1 = input('Enter Player 1 name:') #Enter 'Random' for random player 
+#    name_player2 = input('Enter Player 2 name:')
 game = HanamikojiEngine(name_player1, name_player2)
 game.start()
 
@@ -677,18 +686,15 @@ class MonteCarloTreeSearchNode():
         return self._untried_actions.pop()
 
     def best_child(self, printt, c_param):
-        fractions = [[int(c.q()), int(c.n())] for c in self.children]
         choices_weights = [(c.q() / c.n()) + c_param * np.sqrt((2 * np.log(self.n()) / c.n())) for c in self.children]
-        rollout_options = [ [c.parent_action, c.original_state.cPlayer.name, c.original_state.choice] for c in self.children]
-        rounded_list = [ round(elem, 3) for elem in choices_weights ]
-        self.choices = rounded_list
-        if printt == 'print':   
-            print('fractions')
-            print(rounded_list)
-            print(fractions)
+        if printt == 'print': 
+            fractions = [[int(c.q()), int(c.n())] for c in self.children]
+            rollout_options = [ c.parent_action for c in self.children]
+            rounded_list = [ round(elem, 3) for elem in choices_weights ]
+            indx[0] += 1
             for i in range(0,len(self.children)):
-                childs.append([rollout_options[i], fractions[i], rounded_list[i]])
-
+                childss.append([indx[0], rollout_options[i], fractions[i], rounded_list[i]])
+            
         return self.children[np.argmax(choices_weights)]
 
     def rollout_policy(self, possible_moves):
@@ -711,18 +717,19 @@ class MonteCarloTreeSearchNode():
 
     def best_action(self):
         ll = len(self._untried_actions)
-    
         if ll > 50:
             S = N_SIM_B
-        elif ll > 4 and ll < 25:
+        elif ll > 4 and ll <= 50:
             S = N_SIM_M
-        else:
+        elif ll > 1 and ll <= 4:
             S = N_SIM_T
+        elif ll == 1:
+            S = 1
         print(S)
         print('\n \n best action {} \n \n'.format(len(self._untried_actions)))
 
         for i in range(S):
-            print('simulation {} '.format(i))
+            print(' {} '.format(i), end=' ')
             v = self._tree_policy()   #checks if it's terminal, if not return new node expanded, if yes return best child??
             reward = v.rollout()      #go till the end randomly, return 1 or -1
             v.backpropagate(reward)   #update fractions
@@ -736,7 +743,6 @@ class MonteCarloTreeSearchNode():
             child.original_state.show_table()
 
     def get_legal_actions(self, state): 
-        
             legal_actions = []
             if state.decision == 'trade':
                 if len(state.trade) == 3:
@@ -828,20 +834,17 @@ def MC_vs_random(gam):
         print(gam.player2.moves)
         gam.new_round_p()
         out = main('move', gam)  #Each decision has it's own monte Carlo tree, out should be the best child node. Now Idk what it is
-        childs.append([i, out.parent_action, out.original_state.cPlayer.name])
-        childs.append(out.original_state.print_table())
+        childs.append([i, out.parent_action])
         print('out')
         gam = out.original_state
         gam.show_table()
         if gam.decision == 'trade':
             gam.random_move()
             gam.show_table()
-            childs.append(gam.print_table())
         gam.cPlayer.draw(gam.deck, 1)
         gam.random_move()
         print('round over')
         gam.show_table()
-        childs.append(gam.print_table())
 
     return gam
 
@@ -861,15 +864,19 @@ print(out.winner)
 out.print_winner(childs)
 out.show_table()
 
+actual_moves = f"actual_moves{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+sim_childs = f"sim_childs{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
 
 
 
-with open('file.csv', 'w', newline='') as file:
+with open(actual_moves, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerows(childs)
 
-
+with open(sim_childs, 'w', newline='') as files:
+    writer = csv.writer(files)
+    writer.writerows(childss)
 
 #if state.winner == 0:  
 #    new_state = HanamikojiEngine(name_player1, name_player2)
@@ -895,6 +902,8 @@ with open('file.csv', 'w', newline='') as file:
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #print('~~~~~~~~~~~~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 #Back: RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+
+
 
 
 
